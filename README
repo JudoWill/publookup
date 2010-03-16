@@ -1,0 +1,29 @@
+============
+newpublookup
+============
+
+A simple function for searching Pubmed for articles which mention a particular gene.  This function is a simple wrapper around EBI-web's whatzit function.  Input files should be in the following format:
+
+search query 1	UniProt 1
+search query 2	UniProt 2
+search query 3	UniProt 3
+search query 4	UniProt 4
+
+IDS MUST be UniProt ids.  The whatzit tool will automatically expand these IDS into all of thier common names.  Then on retrieval it will filter the abstracts through a gene-name tagger and ensure tbat the requested gene is actually present.
+
+For example I use this tool to find the number of acticles that mention a gene along with cancer but are not from microarray experiments. Below is an excerpt from one of my lookups.
+
+Cancer NOT microarray	P04217
+Cancer NOT microarray	P11245
+Cancer NOT microarray	P19022
+Cancer NOT microarray	Q9Y243
+Cancer NOT microarray	Q9Y3Q0
+Cancer NOT microarray	Q9UQQ1
+Cancer NOT microarray	O14734
+Cancer NOT microarray	Q02094
+
+Example usage:
+
+python newpublookup.py -o results.txt inputfile.txt
+
+One quick note, the function allows you to specify the number of parellel workers.  The default is 3, I've noticed this balances the speed or retrieval and the "niceness" on the EBI webserver.  Please don't raise this much over 5 otherwise you'll crash thier server (I know from experience).
