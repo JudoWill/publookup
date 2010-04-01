@@ -24,7 +24,9 @@ class fake_memcache():
 
 try:
 	import memcache
+	USE_MEM = True
 except ImportError:
+	USE_MEM = False
 	memcache = fake_memcache
 
 def nth(iterable, n, default=None):
@@ -142,10 +144,9 @@ if __name__ == '__main__':
 						default = False,
 						help = 'Updates the cache file')
 	
+	(options, args) = parser.parse_args()
 	if options.updatecache:
 		memcache = fake_memcache
-	
-	(options, args) = parser.parse_args()
 	
 	line_search_dict = {}
 
