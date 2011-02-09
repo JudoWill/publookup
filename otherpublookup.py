@@ -4,7 +4,7 @@ from collections import defaultdict
 from mpmath import loggamma
 from math import log, exp
 from suds.client import Client
-import optparse, re, shutil, gzip, urllib2, urllib
+import optparse, re, shutil, gzip, urllib2, urllib, logging
 
 
 def logchoose(ni, ki):
@@ -92,23 +92,32 @@ if __name__ == '__main__':
                         help = 'Force updating search cache and gen2pubmed files')
     parser.add_option('-n', '--num-genes', type = 'int', dest = 'numtake',
                         default = 200)
+    parser.add_option('-q', '--quiet', default = False, dest = 'quiet',
+                        action = 'store_true',
+                        help = 'Supress output')
 	
     (options, args) = parser.parse_args()
+    if options.quiet:
+        lvl = logging.CRITICAL
+    else:
+        lvl = logging.DEBUG
+    logging.basicConfig(level = lvl, 
+                        format = '%(asctime)s\t%(message)s')
     
 
     gene2pub_file = os.path.join(options.searchcache, 'gene2pubmed')
     if not os.path.exists(gene2pub_file) or options.forceupdate:
         url = 'ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/gene2pubmed.gz'
-        print 'downloading'
+        logging.debug('downloading gene2pubmed')
         with open(gene2pub_file + '.gz', 'w') as outhandle:
             ihandle = urllib2.urlopen(url)
             outhandle.write(ihandle.read())
         ihandle = gzip.open(gene2pub_file + '.gz')
-        print 'unzipping'
+        logging.debug('unzipping gene2pubmed')
         with open(gene2pub_file, 'w') as ohandle:
             ohandle.write(ihandle.read())
 
-    print 'reading gene2pub'
+    logging.debug('reading gene2pub')
     gene2pub = defaultdict(set)
     all_arts = set()
     with open(gene2pub_file) as handle:
@@ -121,7 +130,7 @@ if __name__ == '__main__':
     genelist_dict = defaultdict(list)
     check_terms = set()
     check_pairs = set()
-    print 'reading search-file'
+    logging.debug('reading search-file')
     with open(options.searchfile) as handle:
         for row in csv.DictReader(handle, delimiter = '\t'):
             check_terms.add(row['Search-Term'])
@@ -136,11 +145,11 @@ if __name__ == '__main__':
     search_results = defaultdict(set)
     for term in check_terms:
         if term not in search_results:
-            print 'searching for term', term
+            logging.debug('searching for term %s' % term)
             search_results[term] = set(SearchPUBMED(term)) & all_arts
-            print 'got %i articles' % len(search_results[term])
+            logging.debug('got %i articles' % len(search_results[term]))
 
-    print 'processing enrichment'
+    logging.debug('processing enrichment')
     with open(options.outfile, 'w') as handle:
         fields = ('SearchName', 'ListName', 'p-value', 'ArticleOverlap',
                     'SearchArticles', 'ListArticles')        
@@ -152,7 +161,7 @@ if __name__ == '__main__':
             m_marked = len(search_results[term])
             n_draws = len(publist_dict[listname])
             p = 1-hypergeo_cdf(x_suc, n_draws, m_marked, total_articles)
-            print search_term, listname, p
+            logging.debug('\t'.join([search_term, listname, str(p)]))
             writer.writerow({
                     'SearchName':search_term,
                     'ListName':listname,
