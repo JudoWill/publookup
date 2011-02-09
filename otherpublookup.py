@@ -133,14 +133,7 @@ if __name__ == '__main__':
         for gene in islice(genelist, options.numtake):
             publist_dict[term] |= gene2pub[gene]
 
-    searchcache_file = os.path.join(options.searchcache, 'cachefile.txt')
     search_results = defaultdict(set)
-    if os.path.exists(searchcache_file):
-        with open(searchcache_file) as handle:
-            for line in handle:
-                term, pub = handle.strip().split('\t')
-                search_results[term].add(pub)
-
     for term in check_terms:
         if term not in search_results:
             print 'searching for term', term
@@ -168,6 +161,6 @@ if __name__ == '__main__':
                     'SearchArticles':m_marked, 
                     'ListArticles':n_draws
                             })
-            
+           
             
 
