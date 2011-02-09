@@ -70,47 +70,48 @@ def SearchPUBMED(search_sent, recent_date = None, BLOCK_SIZE = 100000, START = 0
         search_url += '&reldate=' + str(time_delta.days)
     
     xml_data = urllib2.urlopen(search_url).read()
-
     id_list = re.findall('<Id>(\d*)</Id>', xml_data)
-    id_nums = map(lambda x: int(x), id_list)
 
-    if len(id_nums) == BLOCK_SIZE:
-        return id_nums + SearchPUBMED(search_sent, recent_date = recent_date,
+    if len(id_list) == BLOCK_SIZE:
+        return id_list + SearchPUBMED(search_sent, recent_date = recent_date,
                                       BLOCK_SIZE = BLOCK_SIZE, START = START+BLOCK_SIZE-1)
     else:
-        return id_nums
+        return id_list
 
 
 if __name__ == '__main__':
 
-	
-	parser = optparse.OptionParser("usage: %prog [options]")
-	parser.add_option('-o', '--outfile', type = 'string', dest = 'outfile',
-						help = 'Output File')
+
+    parser = optparse.OptionParser("usage: %prog [options]")
+    parser.add_option('-o', '--outfile', type = 'string', dest = 'outfile',
+                        help = 'Output File')
     parser.add_option('-s', '--searchfile', type = 'string', dest = 'searchfile',
                         help = 'Search Term File')
-	parser.add_option('-c', '--searchcache', type = 'string', dest = 'searchcache',
-						default = 'data/',
-						help = 'Cache file for storing search results')
-    parser.add_option('-f', '--forceupdate', type = 'bool', dest = 'forceupdate',
+    parser.add_option('-c', '--searchcache', type = 'string', dest = 'searchcache',
+                        default = 'data/',
+                        help = 'Cache file for storing search results')
+    parser.add_option('-f', '--forceupdate', dest = 'forceupdate',
                         action = 'store_true', default = False,
                         help = 'Force updating search cache and gen2pubmed files')
     parser.add_option('-n', '--num-genes', type = 'int', dest = 'numtake',
                         default = 200)
 	
-	(options, args) = parser.parse_args()
+    (options, args) = parser.parse_args()
     
 
-    gen2pub_file = os.path.join(options.searchcache)
+    gene2pub_file = os.path.join(options.searchcache, 'gene2pubmed')
     if not os.path.exists(gene2pub_file) or options.forceupdate:
         url = 'ftp://ftp.ncbi.nlm.nih.gov/gene/DATA/gene2pubmed.gz'
+        print 'downloading'
         with open(gene2pub_file + '.gz', 'w') as outhandle:
             ihandle = urllib2.urlopen(url)
             outhandle.write(ihandle.read())
-        with gzip.open(gene2pub_file + '.gz') as ihandle:
-            with open(gene2pub_file, 'w') as ohandle:
-                ohandle.write(ihandle.read())
+        ihandle = gzip.open(gene2pub_file + '.gz')
+        print 'unzipping'
+        with open(gene2pub_file, 'w') as ohandle:
+            ohandle.write(ihandle.read())
 
+    print 'reading gene2pub'
     gene2pub = defaultdict(set)
     all_arts = set()
     with open(gene2pub_file) as handle:
@@ -122,11 +123,14 @@ if __name__ == '__main__':
     
     genelist_dict = defaultdict(set)
     check_terms = set()
+    check_pairs = set()
+    print 'reading search-file'
     with open(options.searchfile) as handle:
         for row in csv.DictReader(handle, delimiter = '\t'):
-            check_terms.add(row['Search-Term'])            
+            check_terms.add(row['Search-Term'])
+            check_pairs.add((row['Search-Term'], row['List-Name']))
             genelist_dict[row['List-Name']].add(row['GeneID'])
-
+    
     publist_dict = defaultdict(set)
     for term, genelist in genelist_dict.items():
         for gene in genelist:
@@ -142,25 +146,28 @@ if __name__ == '__main__':
 
     for term in check_terms:
         if term not in search_results:
-            search_results[term] = SearchPUBMED(term)
+            print 'searching for term', term
+            search_results[term] = set(SearchPUBMED(term)) & all_arts
+            print 'got %i articles' % len(search_results[term])
 
+    print 'processing enrichment'
     with open(options.outfile, 'w') as handle:
         fields = ('SearchName', 'ListName', 'p-value', 'ArticleOverlap',
                     'SearchArticles', 'ListArticles')        
         writer = csv.DictWriter(handle, fields, delimiter = '\t')
         writer.writerow(dict(zip(fields, fields)))
         total_articles = len(all_arts)
-        for search_term, listname in product(check_terms, genelist_dict.keys()):
-            
-            
-            x_suc = len(pub_set & search_results[term])
+        for search_term, listname in check_pairs:
+            #print 'search', search_results[term]
+            #print 'genelist', publist_dict[listname]
+            x_suc = len(publist_dict[listname] & search_results[term])
             m_marked = len(search_results[term])
-            n_draws = len(pub_set)
+            n_draws = len(publist_dict[listname])
             p = 1-hypergeo_cdf(x_suc, n_draws, m_marked, total_articles)
-            print s_name, q_name, p
+            print search_term, listname, p
             writer.writerow({
-                    'SearchName':s_name.split('.')[0],
-                    'ListName':q_name.split('.')[0],
+                    'SearchName':search_term,
+                    'ListName':listname,
                     'p-value':p,
                     'ArticleOverlap':x_suc,
                     'SearchArticles':m_marked, 
