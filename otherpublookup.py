@@ -4,7 +4,7 @@ from collections import defaultdict
 from mpmath import loggamma
 from math import log, exp
 from suds.client import Client
-import optparse, re, shutil, gzip, urllib2
+import optparse, re, shutil, gzip, urllib2, urllib
 
 
 def logchoose(ni, ki):
@@ -61,10 +61,7 @@ def SearchPUBMED(search_sent, recent_date = None, BLOCK_SIZE = 100000, START = 0
     if START > 0:
         POST_URL += 'retstart=%i&' % START
 
-    search_term = search_sent.replace(' ', '%20')
-    search_term = search_term.replace('-', '%20')
-    search_term = search_term.replace('+', '%20')
-    search_url = POST_URL + '&term=' + search_term
+    search_url = POST_URL + '&term=' + urllib.quote_plus(search_sent)
     if recent_date:
         time_delta = datetime.today()-recent_date
         search_url += '&reldate=' + str(time_delta.days)
