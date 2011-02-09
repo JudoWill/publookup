@@ -1,6 +1,10 @@
-============
-newpublookup
-============
+==================
+Publication Lookup
+==================
+
+===============================
+Input Format for whatizitlookup
+===============================
 
 A simple function for searching Pubmed for articles which mention a particular gene.  This function is a simple wrapper around EBI-web's whatzit function.  Input files should be in the following format:
 
@@ -24,6 +28,24 @@ Cancer NOT microarray	Q02094
 
 Example usage:
 
-python newpublookup.py -o results.txt inputfile.txt
+python whatizitlookup.py -o results.txt inputfile.txt
 
 One quick note, the function allows you to specify the number of parellel workers.  The default is 3, I've noticed this balances the speed or retrieval and the "niceness" on the EBI webserver.  Please don't raise this much over 5 otherwise you'll crash thier server (I know from experience).
+
+================================
+Input format for entrezlookup.py
+================================
+
+Search-Term	List-Name	GeneID
+crohn's disease NOT microarray	Common_up	5967
+crohn's disease NOT microarray	Common_up	10562
+crohn's disease NOT microarray	Common_up	83998
+crohn's disease NOT microarray	Common_up	27290
+crohn's disease NOT microarray	Common_up	1116
+crohn's disease NOT microarray	Common_up	6372
+crohn's disease NOT microarray	Common_up	6373
+crohn's disease NOT microarray	Common_up	4319
+crohn's disease NOT microarray	Common_up	6286
+
+Results are taken from the gene2pubmed lookup table provided by the NCBI.
+
