@@ -126,13 +126,13 @@ def ChunkGen(size, iterable):
 	
 	
 if __name__ == '__main__':
-	
+	def_dir = os.path.join(os.path.abspath(__file__).rsplit(os.sep,1)[0], 'data')
 	
 	parser = optparse.OptionParser("usage: %prog [options]")
 	parser.add_option('-o', '--outfile', type = 'string', dest = 'outfile',
 						help = 'Output File')
 	parser.add_option('-c', '--searchcache', type = 'string', dest = 'searchcache',
-						default = 'C:\\publookup\\cachefolder\\',
+						default = def_dir,
 						help = 'Cache file for storing search results')
 	parser.add_option('-w', '--workers', type = 'int', dest = 'numworkers',
 						default = 3,
