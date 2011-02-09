@@ -1,5 +1,5 @@
 import csv, os, os.path
-from itertools import islice, product
+from itertools import islice
 from collections import defaultdict
 from mpmath import loggamma
 from math import log, exp
@@ -118,7 +118,7 @@ if __name__ == '__main__':
                 gene2pub[row['gene']].add(row['pubid'])
                 all_arts.add(row['pubid'])
     
-    genelist_dict = defaultdict(set)
+    genelist_dict = defaultdict(list)
     check_terms = set()
     check_pairs = set()
     print 'reading search-file'
@@ -126,11 +126,11 @@ if __name__ == '__main__':
         for row in csv.DictReader(handle, delimiter = '\t'):
             check_terms.add(row['Search-Term'])
             check_pairs.add((row['Search-Term'], row['List-Name']))
-            genelist_dict[row['List-Name']].add(row['GeneID'])
+            genelist_dict[row['List-Name']].append(row['GeneID'])
     
     publist_dict = defaultdict(set)
     for term, genelist in genelist_dict.items():
-        for gene in genelist:
+        for gene in islice(genelist, options.numtake):
             publist_dict[term] |= gene2pub[gene]
 
     searchcache_file = os.path.join(options.searchcache, 'cachefile.txt')
@@ -155,8 +155,6 @@ if __name__ == '__main__':
         writer.writerow(dict(zip(fields, fields)))
         total_articles = len(all_arts)
         for search_term, listname in check_pairs:
-            #print 'search', search_results[term]
-            #print 'genelist', publist_dict[listname]
             x_suc = len(publist_dict[listname] & search_results[term])
             m_marked = len(search_results[term])
             n_draws = len(publist_dict[listname])
