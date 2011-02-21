@@ -95,6 +95,9 @@ if __name__ == '__main__':
     parser.add_option('-q', '--quiet', default = False, dest = 'quiet',
                         action = 'store_true',
                         help = 'Supress output')
+    parser.add_option('-g', '--gene-level', default = None, dest = 'genelevel', type = None,
+                        action = 'store', help = 'Gene level output')
+                        
 	
     (options, args) = parser.parse_args()
     if options.quiet:
@@ -170,6 +173,19 @@ if __name__ == '__main__':
                     'SearchArticles':m_marked, 
                     'ListArticles':n_draws
                             })
-           
-            
+    if options.genelevel:
+        logging.debug('Doing gene-level output')
+        with open(options.genelevel, 'w') as handle:
+            fields = ('Gene', 'SearchName', 'ListName', 'ArticleNumber', 'ArticleList')
+            writer = csv.DictWriter(handle, fields, delimiter = '\t')
+            writer.writerow(dict(zip(fields, fields)))
+            with open(options.searchfile) as handle:
+                for row in csv.DictReader(handle, delimiter = '\t'):
+                    arts = search_results[row['Search-Term']] & gene2pub[row['GeneID']]
+                    writer.writerow({'Gene':row['GeneID'],
+                                    'SearchName':row['Search-Term'],
+                                    'ListName':row['List-Name'],
+                                    'ArticleNumber':len(arts),
+                                    'ArticleList':','.join(arts)} )
+                
 
