@@ -4,6 +4,7 @@ from collections import defaultdict
 from mpmath import loggamma
 from math import log, exp
 from suds.client import Client
+from operator import __or__
 import optparse, re, shutil, gzip, urllib2, urllib, logging
 
 
@@ -97,6 +98,7 @@ if __name__ == '__main__':
                         help = 'Supress output')
     parser.add_option('-g', '--gene-level', default = None, dest = 'genelevel', type = None,
                         action = 'store', help = 'Gene level output')
+    parser.add_option('--gene-based', default = None, dest = 'genebased', action = 'store')
                         
 	
     (options, args) = parser.parse_args()
@@ -122,12 +124,14 @@ if __name__ == '__main__':
 
     logging.debug('reading gene2pub')
     gene2pub = defaultdict(set)
+    pub2gene = defaultdict(set)
     all_arts = set()
     with open(gene2pub_file) as handle:
         handle.next()
         for row in csv.DictReader(handle, fieldnames = ('taxid', 'gene', 'pubid'), delimiter = '\t'):
             if row['taxid'] == '9606':
                 gene2pub[row['gene']].add(row['pubid'])
+                pub2gene[row['pubid']].add(row['gene'])
                 all_arts.add(row['pubid'])
     
     genelist_dict = defaultdict(list)
@@ -186,6 +190,28 @@ if __name__ == '__main__':
                                     'SearchName':row['Search-Term'],
                                     'ListName':row['List-Name'],
                                     'ArticleNumber':len(arts),
-                                    'ArticleList':','.join(arts)} )
+                                    'ArticleList':','.join(arts)})
+
+    if options.genebased:
+        logging.debug('Doing Gene based output')
+        search2gene = {}
+        for term in check_terms:
+            search2gene[term] = reduce(__or__, [pub2gene[x] for x in search_results[term]])
+
+        with open(options.genebased, 'w') as handle:
+            fields = ('SearchName', 'ListName', 'p-value', 'SearchGenes', 'ListGenes', 'Overlap')
+            writer = csv.DictWriter(handle, fields, delimiter = '\t')
+            for term, listname in check_pairs:
+                x_suc = len(search2gene[term] & set(islice(genelist_dict[listname], options.numtake)))
+                m_marked = min(len(genelist_dict[listname]), options.numtake)
+                n_draws = len(search2gene[term])
+                p = 1-hypergeo_cdf(x_suc, n_draws, m_marked, len(gene2pub))
+                print term, listname, p, x_suc, m_marked, n_draws, len(gene2pub)
+                writer.writerow({'SearchName':term,
+                                'ListName':listname,
+                                'SearchGenes':n_draws,
+                                'ListGenes':m_marked,
+                                'Overlap':x_suc,
+                                'p-value':p})
                 
 
